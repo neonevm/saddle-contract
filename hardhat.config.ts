@@ -29,6 +29,25 @@ let config: HardhatUserConfig = {
       deploy: ["./deploy/hardhat/"],
       autoImpersonate: true,
     },
+    neonlabs: {
+      url: "http://localhost:9090/solana",
+      accounts: [
+        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f080",
+        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f081",
+        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f082",
+        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f083",
+        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f084",
+      ],
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      network_id: 111,
+      chainId: 111,
+      allowUnlimitedContractSize: false,
+      timeout: 100000000,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      isFork: true,
+    },
     mainnet: {
       url: ALCHEMY_BASE_URL[CHAIN_ID.MAINNET] + process.env.ALCHEMY_API_KEY,
       deploy: ["./deploy/mainnet/"],
@@ -36,117 +55,6 @@ let config: HardhatUserConfig = {
         etherscan: {
           apiUrl: "https://api.etherscan.io",
           apiKey: process.env.ETHERSCAN_API ?? "NO_KEY",
-        },
-      },
-    },
-    ropsten: {
-      url: ALCHEMY_BASE_URL[CHAIN_ID.ROPSTEN] + process.env.ALCHEMY_API_KEY,
-      accounts: {
-        mnemonic: process.env.MNEMONIC_TEST_ACCOUNT,
-      },
-      deploy: ["./deploy/ropsten/"],
-    },
-    arbitrum_testnet: {
-      url:
-        ALCHEMY_BASE_URL[CHAIN_ID.ARBITRUM_TESTNET] +
-        process.env.ALCHEMY_API_KEY,
-      chainId: 421611,
-      accounts: {
-        mnemonic: process.env.MNEMONIC_TEST_ACCOUNT,
-      },
-      deploy: ["./deploy/arbitrum/"],
-    },
-    arbitrum_mainnet: {
-      url: "https://arb1.arbitrum.io/rpc",
-      chainId: 42161,
-      deploy: ["./deploy/arbitrum/"],
-      verify: {
-        etherscan: {
-          apiUrl: "https://api.arbiscan.io",
-          apiKey: process.env.ETHERSCAN_ARB_API ?? "NO_KEY",
-        },
-      },
-    },
-    optimism_testnet: {
-      url: "https://kovan.optimism.io",
-      chainId: 69,
-      accounts: {
-        mnemonic: process.env.MNEMONIC_TEST_ACCOUNT,
-      },
-      deploy: ["./deploy/optimism/"],
-    },
-    optimism_mainnet: {
-      url: "https://mainnet.optimism.io",
-      chainId: 10,
-      deploy: ["./deploy/optimism/"],
-      verify: {
-        etherscan: {
-          apiUrl: "https://api-optimistic.etherscan.io",
-          apiKey: process.env.ETHERSCAN_OPT_API ?? "NO_KEY",
-        },
-      },
-    },
-    fantom_testnet: {
-      url: "https://rpc.testnet.fantom.network/",
-      chainId: 4002,
-      accounts: {
-        mnemonic: process.env.MNEMONIC_TEST_ACCOUNT,
-      },
-      deploy: ["./deploy/fantom/"],
-    },
-    fantom_mainnet: {
-      url: "https://rpc.ftm.tools/",
-      chainId: 250,
-      deploy: ["./deploy/fantom/"],
-      verify: {
-        etherscan: {
-          apiUrl: "https://api.ftmscan.com",
-          apiKey: process.env.ETHERSCAN_FTM_API ?? "NO_KEY",
-        },
-      },
-    },
-    evmos_testnet: {
-      url: "https://eth.bd.evmos.dev:8545",
-      chainId: 9000,
-      deploy: ["./deploy/evmos_testnet/"],
-      accounts: {
-        mnemonic: process.env.MNEMONIC_TEST_ACCOUNT,
-      },
-    },
-    evmos_mainnet: {
-      live: true,
-      url: "https://eth.bd.evmos.org:8545",
-      chainId: 9001,
-      deploy: ["./deploy/evmos/"],
-      verify: {
-        etherscan: {
-          apiUrl: "https://evm.evmos.org",
-          apiKey: "NO_KEY",
-        },
-      },
-    },
-    kava_testnet: {
-      url: "https://evm.evm-alpha.kava.io",
-      chainId: 2221,
-      deploy: ["./deploy/kava_testnet/"],
-      verify: {
-        etherscan: {
-          apiUrl: "https://explorer.evm-alpha.kava.io",
-        },
-      },
-      accounts: {
-        mnemonic: process.env.MNEMONIC_TEST_ACCOUNT,
-      },
-    },
-    kava_mainnet: {
-      live: true,
-      url: "https://evm.kava.io",
-      chainId: 2222,
-      deploy: ["./deploy/kava_mainnet/"],
-      verify: {
-        etherscan: {
-          apiUrl: "https://explorer.kava.io",
-          apiKey: "NO_KEY",
         },
       },
     },
