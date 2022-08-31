@@ -218,7 +218,7 @@ async function main() {
 
   for (let i = 0; i < 10; i++) {
     calcTokenAmount = await swap.connect(user1).calculateSwap(2, 1, String(1e6))
-    console.log("\nCalculated swap amount:", toEther(calcTokenAmount))
+    console.log("\nCalculated swap amount:", to6(calcTokenAmount))
     const USDCBefore = await getUserTokenBalance(user1, USDC)
     console.log(
       "User1 USDC amount before:",

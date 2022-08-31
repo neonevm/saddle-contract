@@ -77,7 +77,7 @@ async function setupTest() {
   baseLPToken = await LPToken.deploy()
   await baseLPToken.deployed()
 
-  console.log("Initialize Base swap")
+  console.log("Initializing Base swap")
   await baseSwap.initialize(
     [dai.address, usdc.address, usdt.address],
     [18, 6, 6],
@@ -102,12 +102,6 @@ async function setupTest() {
       await usdc.mint(address, String(2e8))
       await usdt.mint(address, String(2e8))
       await susd.mint(address, String(2e20))
-      console.log(
-        "User1 USDC amount before",
-        to6(await usdc.balanceOf(address)),
-        "SUSD before:",
-        toEther(await susd.balanceOf(address)),
-      )
     },
   )
 
@@ -150,12 +144,6 @@ async function setupTest() {
       .connect(signer)
       .addLiquidity([String(1e20), String(1e8), String(1e8)], 0, MAX_UINT256)
   })
-  console.log(
-    "User1 USDC amount before",
-    to6(await usdc.balanceOf(user1Address)),
-    "SUSD before:",
-    toEther(await susd.balanceOf(user1Address)),
-  )
 
   // Initialize meta swap pool
   // Manually overload the signature
@@ -268,13 +256,6 @@ async function main() {
       to6(tokenFromBalanceBefore),
       "SUSD before:",
       toEther(tokenToBalanceBefore),
-    )
-
-    console.log(
-      "User1 USDC amount before",
-      to6(await usdc.balanceOf(user1Address)),
-      "SUSD before:",
-      toEther(await susd.balanceOf(user1Address)),
     )
 
     // User 1 successfully initiates swap
