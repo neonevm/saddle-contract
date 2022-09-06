@@ -37,7 +37,7 @@ $ npm run build
 
 ## Run local NEON environment:
 ```shell
-sudo NEON_EVM_COMMIT=v0.8.3 FAUCET_COMMIT=latest REVISION=v0.9.1 docker-compose -f docker-compose.neon.yml up -d
+sudo REVISION=v0.11.x NEON_EVM_COMMIT=v0.11.x FAUCET_COMMIT=latest docker-compose -f docker-compose.neon.yml up -d
 ```
 
 Run:
