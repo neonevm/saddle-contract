@@ -28,6 +28,7 @@ const INITIAL_A_VALUE = 50
 const SWAP_FEE = 1e7
 const LP_TOKEN_NAME = "Test LP Token Name"
 const LP_TOKEN_SYMBOL = "TESTLP"
+let tx
 
 async function setupTest() {
   signers = await ethers.getSigners()
@@ -78,7 +79,7 @@ async function setupTest() {
   await baseLPToken.deployed()
 
   console.log("Initializing Base swap")
-  await baseSwap.initialize(
+  tx = await baseSwap.initialize(
     [dai.address, usdc.address, usdt.address],
     [18, 6, 6],
     LP_TOKEN_NAME,
@@ -88,6 +89,7 @@ async function setupTest() {
     0,
     baseLPToken.address,
   )
+  await tx.wait(30)
 
   console.log("Deploying SUSD")
   susd = await ERC20.deploy("Synthetix USD", "sUSD", "18")
@@ -98,10 +100,14 @@ async function setupTest() {
   await asyncForEach(
     [ownerAddress, user1Address, user2Address],
     async (address) => {
-      await dai.mint(address, String(2e20))
-      await usdc.mint(address, String(2e8))
-      await usdt.mint(address, String(2e8))
-      await susd.mint(address, String(2e20))
+      tx = await dai.mint(address, String(2e20))
+      await tx.wait()
+      tx = await usdc.mint(address, String(2e8))
+      await tx.wait()
+      tx = await usdt.mint(address, String(2e8))
+      await tx.wait()
+      tx = await susd.mint(address, String(2e20))
+      await tx.wait()
     },
   )
 
@@ -130,25 +136,34 @@ async function setupTest() {
 
   // Set approvals
   await asyncForEach([owner, user1, user2], async (signer) => {
-    await susd.connect(signer).approve(metaSwap.address, MAX_UINT256)
-    await dai.connect(signer).approve(metaSwap.address, MAX_UINT256)
-    await usdc.connect(signer).approve(metaSwap.address, MAX_UINT256)
-    await usdt.connect(signer).approve(metaSwap.address, MAX_UINT256)
-    await dai.connect(signer).approve(baseSwap.address, MAX_UINT256)
-    await usdc.connect(signer).approve(baseSwap.address, MAX_UINT256)
-    await usdt.connect(signer).approve(baseSwap.address, MAX_UINT256)
-    await baseLPToken.connect(signer).approve(metaSwap.address, MAX_UINT256)
+    tx = await susd.connect(signer).approve(metaSwap.address, MAX_UINT256)
+    await tx.wait()
+    tx = await dai.connect(signer).approve(metaSwap.address, MAX_UINT256)
+    await tx.wait()
+    tx = await usdc.connect(signer).approve(metaSwap.address, MAX_UINT256)
+    await tx.wait()
+    tx = await usdt.connect(signer).approve(metaSwap.address, MAX_UINT256)
+    await tx.wait()
+    tx = await dai.connect(signer).approve(baseSwap.address, MAX_UINT256)
+    await tx.wait()
+    tx = await usdc.connect(signer).approve(baseSwap.address, MAX_UINT256)
+    await tx.wait()
+    tx = await usdt.connect(signer).approve(baseSwap.address, MAX_UINT256)
+    await tx.wait()
+    tx = await baseLPToken.connect(signer).approve(metaSwap.address, MAX_UINT256)
+    await tx.wait()
 
     // Add some liquidity to the base pool
-    await baseSwap
+    tx = await baseSwap
       .connect(signer)
       .addLiquidity([String(1e20), String(1e8), String(1e8)], 0, MAX_UINT256)
+    await tx.wait()
   })
 
   // Initialize meta swap pool
   // Manually overload the signature
   console.log("Initializing MetaSwap")
-  await metaSwap.initializeMetaSwap(
+  tx = await metaSwap.initializeMetaSwap(
     [susd.address, baseLPToken.address],
     [18, 18],
     LP_TOKEN_NAME,
@@ -159,6 +174,7 @@ async function setupTest() {
     baseLPToken.address,
     baseSwap.address,
   )
+  await tx.wait()
 
   metaLPToken = (await ethers.getContractAt(
     "LPToken",
@@ -167,7 +183,8 @@ async function setupTest() {
     ).lpToken,
   )) as LPToken
 
-  await metaSwap.addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256)
+  tx = await metaSwap.addLiquidity([String(1e18), String(1e18)], 0, MAX_UINT256)
+  await tx.wait()
 
   console.log(
     "SUSD pool balance:",
@@ -184,9 +201,10 @@ async function main() {
 
   console.log("\nUser 1 adds Liquidity")
 
-  await metaSwap
+  tx = await metaSwap
     .connect(user1)
     .addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256)
+  await tx.wait()
 
   const actualPoolTokenAmount = await metaLPToken.balanceOf(user1Address)
 
@@ -215,9 +233,10 @@ async function main() {
     )
 
     // User 1 successfully initiates swap
-    await metaSwap
+    tx = await metaSwap
       .connect(user1)
       .swap(0, 1, String(1e17), calculatedSwapReturn, MAX_UINT256)
+    await tx.wait()
 
     // Check the sent and received amounts are as expected
     const [tokenFromBalanceAfter, tokenToBalanceAfter] =
@@ -259,7 +278,7 @@ async function main() {
     )
 
     // User 1 successfully initiates swap
-    await metaSwap
+    tx = await metaSwap
       .connect(user1)
       .swapUnderlying(
         2,
@@ -268,6 +287,7 @@ async function main() {
         minReturnWithNegativeSlippage,
         MAX_UINT256,
       )
+    await tx.wait()
 
     const [tokenFromBalanceAfter, tokenToBalanceAfter] =
       await getUserTokenBalances(user1, [usdc, susd])
@@ -301,9 +321,10 @@ async function main() {
     )
 
     // User 1 successfully initiates swap
-    await metaSwap
+    tx = await metaSwap
       .connect(user1)
       .swapUnderlying(1, 3, String(1e17), calculatedSwapReturn, MAX_UINT256)
+    await tx.wait()
 
     // Check the sent and received amounts are as expected
     const [tokenFromBalanceAfter, tokenToBalanceAfter] =
@@ -333,9 +354,10 @@ async function main() {
   console.log("Removed liquidity in Base LP:", toEther(expectedAmounts[1]))
 
   // Allow burn of swapToken
-  await metaLPToken
+  tx = await metaLPToken
     .connect(user2)
     .approve(metaSwap.address, currentUser1Balance)
+  await tx.wait()
   const beforeTokenBalances = await getUserTokenBalances(user2, [
     susd,
     baseLPToken,
@@ -345,7 +367,8 @@ async function main() {
   console.log("User2 Base LP balance before:", toEther(beforeTokenBalances[1]))
 
   console.log("Transfer LP token to user2")
-  await metaLPToken.connect(user1).transfer(user2Address, currentUser1Balance)
+  tx = await metaLPToken.connect(user1).transfer(user2Address, currentUser1Balance)
+  await tx.wait()
 
   console.log(
     "User2 Meta LP token balance",
@@ -356,13 +379,16 @@ async function main() {
     "Withdraw user2's share via all tokens in proportion to pool's balances",
   )
 
-  await metaLPToken
+  tx = await metaLPToken
     .connect(user2)
     .approve(metaSwap.address, currentUser1Balance)
+  await tx.wait()
 
-  metaSwap
+  tx = await metaSwap
     .connect(user2)
     .removeLiquidity(currentUser1Balance, [0, 0], MAX_UINT256)
+
+  await tx.wait()
 
   const afterTokenBalances = await getUserTokenBalances(user2, [
     susd,

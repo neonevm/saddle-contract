@@ -42,6 +42,7 @@ const SWAP_FEE = 1e7
 const LP_TOKEN_NAME = "Test LP Token Name"
 const LP_TOKEN_SYMBOL = "TESTLP"
 const TOKENS: Contract[] = []
+let tx
 
 async function setupTest() {
   TOKENS.length = 0
@@ -70,8 +71,10 @@ async function setupTest() {
   await asyncForEach(
     [ownerAddress, user1Address, user2Address, await attacker.getAddress()],
     async (address) => {
-      await DAI.mint(address, String(1e20))
-      await USDC.mint(address, String(1e8))
+      tx = await DAI.mint(address, String(1e20))
+      await tx.wait()
+      tx = await USDC.mint(address, String(1e8))
+      await tx.wait()
     },
   )
 
@@ -101,7 +104,7 @@ async function setupTest() {
   const lpToken = await LPToken.deploy()
   await lpToken.deployed()
 
-  await swap.initialize(
+  tx = await swap.initialize(
     [DAI.address, USDC.address],
     [18, 6],
     LP_TOKEN_NAME,
@@ -111,6 +114,7 @@ async function setupTest() {
     0,
     lpToken.address,
   )
+  await tx.wait(30)
 
   console.log("Vitual price is 0: ", toEther(await swap.getVirtualPrice()))
 
@@ -122,18 +126,21 @@ async function setupTest() {
   )) as LPToken
 
   await asyncForEach([owner, user1, user2, attacker], async (signer) => {
-    await DAI.connect(signer).approve(swap.address, MAX_UINT256)
-    await USDC.connect(signer).approve(swap.address, MAX_UINT256)
+    tx = await DAI.connect(signer).approve(swap.address, MAX_UINT256)
+    await tx.wait(30)
+    tx = await USDC.connect(signer).approve(swap.address, MAX_UINT256)
+    await tx.wait(30)
   })
 
   console.log("Populate the pool with initial liquidity")
-  await swap.addLiquidity([String(50e18), String(50e6)], 0, MAX_UINT256)
+  tx = await swap.addLiquidity([String(50e18), String(50e6)], 0, MAX_UINT256)
+  await tx.wait(30)
 
   console.log("Token 0 balance:", toEther(await swap.getTokenBalance(0)))
   console.log("Token 1 balance:", to6(await swap.getTokenBalance(1)))
   console.log(
     "LP token balance:",
-    toEther(await getUserTokenBalance(owner, swapToken)),
+    toEther(await swapToken.balanceOf(await owner.getAddress())),
   )
 }
 
@@ -148,18 +155,18 @@ async function main() {
   console.log("LP amount calculated ", toEther(calcTokenAmount))
 
   // Add liquidity as user1
-  await swap
+  tx = await swap
     .connect(user1)
     .addLiquidity(
       [String(1e18), String(1e6)],
       calcTokenAmount.mul(99).div(100),
       (await getCurrentBlockTimestamp()) + 60,
     )
+  await tx.wait(30)
 
-  // Verify swapToken balance
   console.log(
     "User1 LP balance:",
-    toEther(await swapToken.balanceOf(await user1.getAddress())),
+    toEther(await swapToken.balanceOf(user1Address)),
   )
 
   console.log("\nPerforming swaps DAI -> USDC")
@@ -174,8 +181,10 @@ async function main() {
       "USDC before:",
       to6(await getUserTokenBalance(user1, USDC)),
     )
-    await DAI.connect(user1).approve(swap.address, String(1e6))
-    await swap
+    tx = await DAI.connect(user1).approve(swap.address, String(1e6))
+    await tx.wait()
+
+    tx = await swap
       .connect(user1)
       .swap(
         1,
@@ -184,6 +193,7 @@ async function main() {
         calcTokenAmount,
         (await getCurrentBlockTimestamp()) + 60,
       )
+    await tx.wait()
     const DAIAfter = await getUserTokenBalance(user1, DAI)
 
     // Verify user1 balance changes
@@ -217,8 +227,10 @@ async function main() {
       "USDC before:",
       to6(await getUserTokenBalance(user1, USDC)),
     )
-    await DAI.connect(user1).approve(swap.address, String(1e18))
-    await swap
+    tx = await DAI.connect(user1).approve(swap.address, String(1e18))
+    await tx.wait()
+    
+    tx = await swap
       .connect(user1)
       .swap(
         0,
@@ -227,6 +239,8 @@ async function main() {
         calcTokenAmount,
         (await getCurrentBlockTimestamp()) + 60,
       )
+    await tx.wait()
+
     const DAIAfter = await getUserTokenBalance(user1, DAI)
 
     // Verify user1 balance changes
@@ -262,25 +276,28 @@ async function main() {
   console.log("Removed liquidity in USDC:", to6(expectedAmounts[1]))
 
   // Allow burn of swapToken
-  await swapToken.connect(user2).approve(swap.address, lpAmount)
+  tx = await swapToken.connect(user2).approve(swap.address, lpAmount)
+  await tx.wait()
   const beforeTokenBalances = await getUserTokenBalances(user2, TOKENS)
 
   console.log("User2 DAI balance before:", toEther(beforeTokenBalances[0]))
   console.log("User2 USDC balance before:", to6(beforeTokenBalances[1]))
 
   console.log("Transfer LP token to user2")
-  await swapToken.connect(user1).transfer(user2Address, lpAmount)
+  tx = await swapToken.connect(user1).transfer(user2Address, lpAmount)
+  await tx.wait()
 
   console.log(
     "Withdraw user2's share via all tokens in proportion to pool's balances",
   )
-  await swap
+  tx = await swap
     .connect(user2)
     .removeLiquidity(
       lpAmount,
       expectedAmounts,
       (await getCurrentBlockTimestamp()) + 60,
     )
+  await tx.wait()
 
   const afterTokenBalances = await getUserTokenBalances(user2, TOKENS)
 
