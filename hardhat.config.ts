@@ -23,7 +23,7 @@ if (process.env.HARDHAT_FORK) {
 }
 
 let config: HardhatUserConfig = {
-  defaultNetwork: "hardhat",
+  defaultNetwork: "neonlabs_devnet",
   networks: {
     hardhat: {
       deploy: ["./deploy/hardhat/"],
@@ -42,6 +42,25 @@ let config: HardhatUserConfig = {
       // @ts-ignore
       network_id: 111,
       chainId: 111,
+      allowUnlimitedContractSize: false,
+      timeout: 100000000,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      isFork: true,
+    },
+    neonlabs_devnet: {
+      url: "https://proxy.devnet.neonlabs.org/solana",
+      accounts: [
+        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f080",
+        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f081",
+        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f082",
+        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f083",
+        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f084",
+      ],
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      network_id: 245022926,
+      chainId: 245022926,
       allowUnlimitedContractSize: false,
       timeout: 100000000,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment

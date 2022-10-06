@@ -114,7 +114,7 @@ async function setupTest() {
     0,
     lpToken.address,
   )
-  await tx.wait(30)
+  await tx.wait()
 
   console.log("Vitual price is 0: ", toEther(await swap.getVirtualPrice()))
 
@@ -127,14 +127,14 @@ async function setupTest() {
 
   await asyncForEach([owner, user1, user2, attacker], async (signer) => {
     tx = await DAI.connect(signer).approve(swap.address, MAX_UINT256)
-    await tx.wait(30)
+    await tx.wait()
     tx = await USDC.connect(signer).approve(swap.address, MAX_UINT256)
-    await tx.wait(30)
+    await tx.wait()
   })
 
   console.log("Populate the pool with initial liquidity")
   tx = await swap.addLiquidity([String(50e18), String(50e6)], 0, MAX_UINT256)
-  await tx.wait(30)
+  await tx.wait()
 
   console.log("Token 0 balance:", toEther(await swap.getTokenBalance(0)))
   console.log("Token 1 balance:", to6(await swap.getTokenBalance(1)))
@@ -162,7 +162,7 @@ async function main() {
       calcTokenAmount.mul(99).div(100),
       (await getCurrentBlockTimestamp()) + 60,
     )
-  await tx.wait(30)
+  await tx.wait()
 
   console.log(
     "User1 LP balance:",
@@ -229,7 +229,6 @@ async function main() {
     )
     tx = await DAI.connect(user1).approve(swap.address, String(1e18))
     await tx.wait()
-    
     tx = await swap
       .connect(user1)
       .swap(
