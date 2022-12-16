@@ -1,4 +1,3 @@
-import { BigNumber, Signer, Contract } from "ethers"
 import { ethers } from "hardhat"
 import { LPToken } from "../build/typechain/"
 import {
@@ -8,24 +7,19 @@ import {
   getUserTokenBalances,
   MAX_UINT256,
 } from "./testUtils"
+import { BigNumber, Contract, Signer } from "ethers"
 
-const toEther = ethers.utils.formatEther
-const to6 = (x: any) => ethers.utils.formatUnits(x, 6)
+import {
+  to6,
+  toEther,
+  LP_TOKEN_NAME,
+  LP_TOKEN_SYMBOL,
+  SWAP_FEE,
+  INITIAL_A_VALUE,
+  setupCommon,
+} from "./common"
 
-let signers: Array<Signer>
-let swap: Contract
-let swapUtils: Contract
-let DAI: Contract
-let USDC: Contract
-let USDT: Contract
 let swapToken: LPToken
-let owner: Signer
-let user1: Signer
-let user2: Signer
-let attacker: Signer
-let ownerAddress: string
-let user1Address: string
-let user2Address: string
 let swapStorage: {
   initialA: BigNumber
   futureA: BigNumber
@@ -35,65 +29,34 @@ let swapStorage: {
   adminFee: BigNumber
   lpToken: string
 }
-
-// Test Values
-const INITIAL_A_VALUE = 50
-const SWAP_FEE = 1e7
-const LP_TOKEN_NAME = "Test LP Token Name"
-const LP_TOKEN_SYMBOL = "TESTLP"
-const TOKENS: Contract[] = []
 let tx
+let swap: Contract
+let swapUtils: Contract
+let DAI: Contract
+let USDC: Contract
+let USDT: Contract
+let lpToken: Contract
+let amplificationUtils: Contract
+
+let owner: Signer
+let user1: Signer
+let user2: Signer
+let attacker: Signer
+let user2Address: string
+const TOKENS: Contract[] = []
 
 async function setupTest() {
-  TOKENS.length = 0
-  signers = await ethers.getSigners()
-  owner = signers[0]
-  user1 = signers[1]
-  user2 = signers[2]
-  attacker = signers[3]
-  ownerAddress = await owner.getAddress()
-  user1Address = await user1.getAddress()
-  user2Address = await user2.getAddress()
-
-  const ERC20 = await ethers.getContractFactory("GenericERC20")
-
-  console.log("\nDeploying DAI")
-  DAI = await ERC20.deploy("Dai Stablecoin", "DAI", "18")
-  console.log("Deploying USDC")
-  USDC = await ERC20.deploy("USD Coin", "USDC", "6")
-  console.log("Deploying USDT")
-  USDT = await ERC20.deploy("Tether USD", "USDT", "6")
-
-  await DAI.deployed()
-  await USDC.deployed()
-  await USDT.deployed()
-
-  TOKENS.push(DAI, USDC, USDT)
-
-  // Mint dummy tokens
-  await asyncForEach(
-    [ownerAddress, user1Address, user2Address, await attacker.getAddress()],
-    async (address) => {
-      tx = await DAI.mint(address, String(1e20))
-      await tx.wait()
-      tx = await USDC.mint(address, String(1e8))
-      await tx.wait()
-      tx = await USDT.mint(address, String(1e8))
-      await tx.wait()
-    },
-  )
-
-  console.log("Deploying SwapUtils")
-  const SwapUtils = await ethers.getContractFactory("SwapUtils")
-  swapUtils = await SwapUtils.deploy()
-  await swapUtils.deployed()
-
-  console.log("Deploying Amplification Utils")
-  const AmplificationUtils = await ethers.getContractFactory(
-    "AmplificationUtils",
-  )
-  const amplificationUtils = await AmplificationUtils.deploy()
-  await amplificationUtils.deployed()
+  const commonData = await setupCommon()
+  swapUtils = commonData.swapUtils
+  DAI = commonData.DAI
+  USDC = commonData.USDC
+  USDT = commonData.USDT
+  lpToken = commonData.lpToken
+  amplificationUtils = commonData.amplificationUtils
+  user1 = commonData.user1
+  user2 = commonData.user2
+  user2Address = commonData.user2Address
+  owner = commonData.owner
 
   console.log("Deploying Swap contract")
   const Swap = await ethers.getContractFactory("Swap", {
@@ -104,10 +67,6 @@ async function setupTest() {
   })
 
   swap = await Swap.deploy()
-
-  const LPToken = await ethers.getContractFactory("LPToken")
-  const lpToken = await LPToken.deploy()
-  await lpToken.deployed()
 
   tx = await swap.initialize(
     [DAI.address, USDC.address, USDT.address],
@@ -174,7 +133,7 @@ async function main() {
       calcTokenAmount.mul(99).div(100),
       (await getCurrentBlockTimestamp()) + 60,
     )
-    await tx.wait(30)
+  await tx.wait(30)
 
   // Verify swapToken balance
   console.log(
@@ -196,7 +155,7 @@ async function main() {
       to6(await getUserTokenBalance(user1, USDC)),
     )
     tx = await DAI.connect(user1).approve(swap.address, String(1e6))
-    await tx.wait()
+    await tx.wait(30)
     tx = await swap
       .connect(user1)
       .swap(
@@ -206,7 +165,7 @@ async function main() {
         calcTokenAmount,
         (await getCurrentBlockTimestamp()) + 60,
       )
-    await tx.wait()
+    await tx.wait(30)
     const DAIAfter = await getUserTokenBalance(user1, DAI)
 
     // Verify user1 balance changes
@@ -239,7 +198,7 @@ async function main() {
       to6(await getUserTokenBalance(user1, USDT)),
     )
     tx = await USDC.connect(user1).approve(swap.address, String(1e6))
-    await tx.wait()
+    await tx.wait(30)
     tx = await swap
       .connect(user1)
       .swap(
@@ -249,7 +208,7 @@ async function main() {
         calcTokenAmount,
         (await getCurrentBlockTimestamp()) + 60,
       )
-    await tx.wait()
+    await tx.wait(30)
     const USDCAfter = await getUserTokenBalance(user1, USDC)
 
     // Verify user1 balance changes
@@ -284,7 +243,7 @@ async function main() {
       toEther(await getUserTokenBalance(user1, DAI)),
     )
     tx = await DAI.connect(user1).approve(swap.address, String(1e18))
-    await tx.wait()
+    await tx.wait(30)
     tx = await swap
       .connect(user1)
       .swap(
@@ -294,7 +253,7 @@ async function main() {
         calcTokenAmount,
         (await getCurrentBlockTimestamp()) + 60,
       )
-    await tx.wait()
+    await tx.wait(30)
     const USDTAfter = await getUserTokenBalance(user1, USDT)
 
     // Verify user1 balance changes
@@ -332,7 +291,7 @@ async function main() {
 
   // Allow burn of swapToken
   tx = await swapToken.connect(user2).approve(swap.address, lpAmount)
-  await tx.wait()
+  await tx.wait(30)
   const beforeTokenBalances = await getUserTokenBalances(user2, TOKENS)
 
   console.log("User2 DAI balance before:", toEther(beforeTokenBalances[0]))
@@ -341,7 +300,7 @@ async function main() {
 
   console.log("Transfer LP token to user2")
   tx = await swapToken.connect(user1).transfer(user2Address, lpAmount)
-  await tx.wait()
+  await tx.wait(30)
 
   console.log(
     "Withdraw user2's share via all tokens in proportion to pool's balances",
@@ -353,7 +312,7 @@ async function main() {
       expectedAmounts,
       (await getCurrentBlockTimestamp()) + 60,
     )
-  await tx.wait()
+  await tx.wait(30)
 
   const afterTokenBalances = await getUserTokenBalances(user2, TOKENS)
 

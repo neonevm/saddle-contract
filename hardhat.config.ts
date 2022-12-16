@@ -11,71 +11,30 @@ import "hardhat-spdx-license-identifier"
 
 import { HardhatUserConfig, task } from "hardhat/config"
 import dotenv from "dotenv"
-import { ALCHEMY_BASE_URL, CHAIN_ID } from "./utils/network"
+import { CHAIN_ID } from "./utils/network"
 import { MULTISIG_ADDRESSES, PROD_DEPLOYER_ADDRESS } from "./utils/accounts"
 import { Deployment } from "hardhat-deploy/dist/types"
 import { HttpNetworkUserConfig } from "hardhat/types"
 
 dotenv.config()
 
-if (process.env.HARDHAT_FORK) {
-  process.env["HARDHAT_DEPLOY_FORK"] = process.env.HARDHAT_FORK
-}
+const proxyUrl = process.env.NEON_PROXY_URL
+// @ts-ignore
+const accounts = process.env.NEON_ACCOUNTS.split(",")
+// @ts-ignore
+const chainId = parseInt(process.env.NEON_CHAIN_ID) || 111
 
 let config: HardhatUserConfig = {
-  defaultNetwork: "neonlabs_devnet",
+  defaultNetwork: "neonlabs",
   networks: {
-    hardhat: {
-      deploy: ["./deploy/hardhat/"],
-      autoImpersonate: true,
-    },
     neonlabs: {
-      url: "http://localhost:9090/solana",
-      accounts: [
-        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f080",
-        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f081",
-        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f082",
-        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f083",
-        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f084",
-      ],
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      url: proxyUrl,
       // @ts-ignore
-      network_id: 111,
-      chainId: 111,
+      accounts: accounts,
+      // @ts-ignore
+      chainId: chainId,
       allowUnlimitedContractSize: false,
       timeout: 100000000,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      isFork: true,
-    },
-    neonlabs_devnet: {
-      url: "https://proxy.devnet.neonlabs.org/solana",
-      accounts: [
-        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f080",
-        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f081",
-        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f082",
-        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f083",
-        "0x41167312f8c46439b2bcc5e5a6af929262efcd20357a56ebcbc455d835d9f084",
-      ],
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      network_id: 245022926,
-      chainId: 245022926,
-      allowUnlimitedContractSize: false,
-      timeout: 100000000,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      isFork: true,
-    },
-    mainnet: {
-      url: ALCHEMY_BASE_URL[CHAIN_ID.MAINNET] + process.env.ALCHEMY_API_KEY,
-      deploy: ["./deploy/mainnet/"],
-      verify: {
-        etherscan: {
-          apiUrl: "https://api.etherscan.io",
-          apiKey: process.env.ETHERSCAN_API ?? "NO_KEY",
-        },
-      },
     },
   },
   paths: {
