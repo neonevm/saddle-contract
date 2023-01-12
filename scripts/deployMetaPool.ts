@@ -1,7 +1,7 @@
 import { Contract, Signer } from "ethers"
 import { ethers } from "hardhat"
 import { LPToken } from "../build/typechain/"
-import { asyncForEach, getUserTokenBalances, MAX_UINT256 } from "./testUtils"
+import {asyncForEach, getUserTokenBalance, getUserTokenBalances, MAX_UINT256} from "./testUtils"
 
 import {
   setupCommon,
@@ -10,7 +10,7 @@ import {
   LP_TOKEN_NAME,
   LP_TOKEN_SYMBOL,
   SWAP_FEE,
-  INITIAL_A_VALUE,
+  INITIAL_A_VALUE, ReportItem,
 } from "./common"
 
 let SUSD: Contract
@@ -46,16 +46,9 @@ async function setupTest() {
   user2Address = commonData.user2Address
   owner = commonData.owner
   ownerAddress = commonData.ownerAddress
-  console.log("Deploying Swap contract")
-  const Swap = await ethers.getContractFactory("Swap", {
-    libraries: {
-      SwapUtils: swapUtils.address,
-      AmplificationUtils: amplificationUtils.address,
-    },
-  })
+  swap = commonData.swap
 
-  swap = await Swap.deploy()
-  console.log("Initializing Base swap")
+  console.log("Initialize Swap contract")
   tx = await swap.initialize(
     [DAI.address, USDC.address, USDT.address],
     [18, 6, 6],
@@ -179,12 +172,22 @@ async function setupTest() {
 async function main() {
   await setupTest()
 
+  const gasPrice = await ethers.provider.getGasPrice()
+  const report = [] as ReportItem[]
+
   console.log("\nUser 1 adds Liquidity")
 
   tx = await metaSwap
     .connect(user1)
     .addLiquidity([String(1e18), String(3e18)], 0, MAX_UINT256)
-  await tx.wait(30)
+  let receipt = await tx.wait(30)
+
+  report.push({
+    name: "Add liquidity in metapool",
+    usedGas: receipt["gasUsed"].toString(),
+    gasPrice: gasPrice.toString(),
+    tx: receipt["transactionHash"],
+  })
 
   const actualPoolTokenAmount = await metaLPToken.balanceOf(user1Address)
 
@@ -216,7 +219,7 @@ async function main() {
     tx = await metaSwap
       .connect(user1)
       .swap(0, 1, String(1e17), calculatedSwapReturn, MAX_UINT256)
-    await tx.wait(30)
+    receipt = await tx.wait(30)
 
     // Check the sent and received amounts are as expected
     const [tokenFromBalanceAfter, tokenToBalanceAfter] =
@@ -229,6 +232,12 @@ async function main() {
       toEther(tokenToBalanceAfter),
     )
   }
+  report.push({
+    name: "Swap SUSD -> LP metapool",
+    usedGas: receipt["gasUsed"].toString(),
+    gasPrice: gasPrice.toString(),
+    tx: receipt["transactionHash"],
+  })
 
   console.log("\nPerforming swaps USDC -> SUSD")
   console.log("From 6 decimal token (base) to 18 decimal token (meta)")
@@ -267,7 +276,7 @@ async function main() {
         minReturnWithNegativeSlippage,
         MAX_UINT256,
       )
-    await tx.wait(30)
+    receipt = await tx.wait(30)
 
     const [tokenFromBalanceAfter, tokenToBalanceAfter] =
       await getUserTokenBalances(user1, [USDC, SUSD])
@@ -279,6 +288,12 @@ async function main() {
     )
   }
 
+  report.push({
+    name: "Swap USDC -> SUSD metapool",
+    usedGas: receipt["gasUsed"].toString(),
+    gasPrice: gasPrice.toString(),
+    tx: receipt["transactionHash"],
+  })
   console.log("\nPerforming swaps DAI -> USDT")
   console.log("From 18 decimal token (base) to 6 decimal token (base)")
 
@@ -304,7 +319,7 @@ async function main() {
     tx = await metaSwap
       .connect(user1)
       .swapUnderlying(1, 3, String(1e17), calculatedSwapReturn, MAX_UINT256)
-    await tx.wait(30)
+    receipt = await tx.wait(30)
 
     // Check the sent and received amounts are as expected
     const [tokenFromBalanceAfter, tokenToBalanceAfter] =
@@ -318,6 +333,12 @@ async function main() {
     )
   }
 
+  report.push({
+    name: "Swap DAI -> USDT metapool",
+    usedGas: receipt["gasUsed"].toString(),
+    gasPrice: gasPrice.toString(),
+    tx: receipt["transactionHash"],
+  })
   console.log("\nRemove Liquidity")
 
   const currentUser1Balance = await metaLPToken.balanceOf(user1Address)
@@ -338,10 +359,11 @@ async function main() {
     .connect(user2)
     .approve(metaSwap.address, currentUser1Balance)
   await tx.wait(30)
-  const beforeTokenBalances = await getUserTokenBalances(user2, [SUSD, lpToken])
+  const beforeUser2SUSD = await getUserTokenBalance(user2, SUSD)
+  const beforeUser2lpToken = await getUserTokenBalance(user2, lpToken)
 
-  console.log("\nUser2 SUSD balance before:", toEther(beforeTokenBalances[0]))
-  console.log("User2 Base LP balance before:", toEther(beforeTokenBalances[1]))
+  console.log("User2 SUSD balance before:", toEther(beforeUser2SUSD))
+  console.log("User2 lpToken balance before:", to6(beforeUser2lpToken))
 
   console.log("Transfer LP token to user2")
   tx = await metaLPToken
@@ -367,12 +389,18 @@ async function main() {
     .connect(user2)
     .removeLiquidity(currentUser1Balance, [0, 0], MAX_UINT256)
 
-  await tx.wait(30)
+  receipt = await tx.wait(30)
+  report.push({
+    name: "Remove liquidity in Metapool",
+    usedGas: receipt["gasUsed"].toString(),
+    gasPrice: gasPrice.toString(),
+    tx: receipt["transactionHash"],
+  })
+  const afterUser2SUSD = await getUserTokenBalance(user2, SUSD)
+  const afterUser2lpToken = await getUserTokenBalance(user2, lpToken)
 
-  const afterTokenBalances = await getUserTokenBalances(user2, [SUSD, lpToken])
-
-  console.log("User2 SUSD balance after:", toEther(afterTokenBalances[0]))
-  console.log("User2 Base LP balance after:", toEther(afterTokenBalances[1]))
+  console.log("User2 SUSD balance after:", toEther(afterUser2SUSD))
+  console.log("User2 lpToken balance after:", to6(afterUser2lpToken))
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -381,3 +409,5 @@ main().catch((error) => {
   console.error(error)
   process.exitCode = 1
 })
+
+export { main }

@@ -5,11 +5,12 @@ import {
   asyncForEach,
   getCurrentBlockTimestamp,
   getUserTokenBalance,
-  getUserTokenBalances,
   MAX_UINT256,
 } from "./testUtils"
 
 import {
+  writeTXData,
+  ReportItem,
   to6,
   toEther,
   LP_TOKEN_NAME,
@@ -45,6 +46,10 @@ let user1Address: string
 let user2Address: string
 const TOKENS: Contract[] = []
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function setupTest() {
   const commonData = await setupCommon()
   swapUtils = commonData.swapUtils
@@ -57,16 +62,10 @@ async function setupTest() {
   user2 = commonData.user2
   user2Address = commonData.user2Address
   owner = commonData.owner
+  attacker = commonData.attacker
+  swap = commonData.swap
 
-  console.log("Deploying Swap contract")
-  const Swap = await ethers.getContractFactory("Swap", {
-    libraries: {
-      SwapUtils: swapUtils.address,
-      AmplificationUtils: amplificationUtils.address,
-    },
-  })
-
-  const swap = await Swap.deploy()
+  console.log("Initialize Swap contract")
 
   tx = await swap.initialize(
     [DAI.address, USDC.address],
@@ -80,6 +79,7 @@ async function setupTest() {
   )
   await tx.wait(30)
 
+  await delay(30000)
   console.log("Vitual price is 0: ", toEther(await swap.getVirtualPrice()))
 
   swapStorage = await swap.swapStorage()
@@ -110,6 +110,8 @@ async function setupTest() {
 
 async function main() {
   await setupTest()
+  const gasPrice = await ethers.provider.getGasPrice()
+  const report = [] as ReportItem[]
 
   console.log("User 1 adds Liquidity")
   let calcTokenAmount = await swap.calculateTokenAmount(
@@ -126,8 +128,14 @@ async function main() {
       calcTokenAmount.mul(99).div(100),
       (await getCurrentBlockTimestamp()) + 60,
     )
-  await tx.wait(30)
+  let receipt = await tx.wait(30)
 
+  report.push({
+    name: "Add liquidity",
+    usedGas: receipt["gasUsed"].toString(),
+    gasPrice: gasPrice.toString(),
+    tx: receipt["transactionHash"],
+  })
   console.log(
     "User1 LP balance:",
     toEther(await swapToken.balanceOf(user1Address)),
@@ -157,7 +165,7 @@ async function main() {
         calcTokenAmount,
         (await getCurrentBlockTimestamp()) + 60,
       )
-    await tx.wait(30)
+    receipt = await tx.wait(30)
     const DAIAfter = await getUserTokenBalance(user1, DAI)
 
     // Verify user1 balance changes
@@ -176,7 +184,12 @@ async function main() {
       to6(await swap.getTokenBalance(1)),
     )
   }
-
+  report.push({
+    name: "Swap DAI -> USDC",
+    usedGas: receipt["gasUsed"].toString(),
+    gasPrice: gasPrice.toString(),
+    tx: receipt["transactionHash"],
+  })
   console.log("\nPerforming swaps USDC -> DAI")
 
   for (let i = 0; i < 10; i++) {
@@ -202,7 +215,7 @@ async function main() {
         calcTokenAmount,
         (await getCurrentBlockTimestamp()) + 60,
       )
-    await tx.wait(30)
+    receipt = await tx.wait(30)
 
     const DAIAfter = await getUserTokenBalance(user1, DAI)
 
@@ -222,7 +235,12 @@ async function main() {
       to6(await swap.getTokenBalance(1)),
     )
   }
-
+  report.push({
+    name: "Swap USDC -> DAI",
+    usedGas: receipt["gasUsed"].toString(),
+    gasPrice: gasPrice.toString(),
+    tx: receipt["transactionHash"],
+  })
   console.log("\nRemove Liquidity")
 
   const lpAmount = await swapToken.balanceOf(await user1.getAddress())
@@ -241,10 +259,11 @@ async function main() {
   // Allow burn of swapToken
   tx = await swapToken.connect(user2).approve(swap.address, lpAmount)
   await tx.wait(30)
-  const beforeTokenBalances = await getUserTokenBalances(user2, TOKENS)
+  const beforeUser2DAI = await getUserTokenBalance(user2, DAI)
+  const beforeUser2USDC = await getUserTokenBalance(user2, USDC)
 
-  console.log("User2 DAI balance before:", toEther(beforeTokenBalances[0]))
-  console.log("User2 USDC balance before:", to6(beforeTokenBalances[1]))
+  console.log("User2 DAI balance before:", toEther(beforeUser2DAI))
+  console.log("User2 USDC balance before:", to6(beforeUser2USDC))
 
   console.log("Transfer LP token to user2")
   tx = await swapToken.connect(user1).transfer(user2Address, lpAmount)
@@ -260,12 +279,22 @@ async function main() {
       expectedAmounts,
       (await getCurrentBlockTimestamp()) + 60,
     )
-  await tx.wait(30)
+  receipt = await tx.wait(30)
 
-  const afterTokenBalances = await getUserTokenBalances(user2, TOKENS)
+  const afterUser2DAI = await getUserTokenBalance(user2, DAI)
+  const afterUser2USDC = await getUserTokenBalance(user2, USDC)
 
-  console.log("User2 DAI balance after:", toEther(afterTokenBalances[0]))
-  console.log("User2 USDC balance after:", to6(afterTokenBalances[1]))
+  report.push({
+    name: "Remove liquidity",
+    usedGas: receipt["gasUsed"].toString(),
+    gasPrice: gasPrice.toString(),
+    tx: receipt["transactionHash"],
+  })
+
+  console.log("User2 DAI balance after:", toEther(afterUser2DAI))
+  console.log("User2 USDC balance after:", to6(afterUser2USDC))
+
+  writeTXData(report)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -274,3 +303,5 @@ main().catch((error) => {
   console.error(error)
   process.exitCode = 1
 })
+
+export { main }
