@@ -18,9 +18,9 @@ import { HttpNetworkUserConfig } from "hardhat/types"
 
 dotenv.config()
 
-const proxyUrl = process.env.NEON_PROXY_URL
+const proxyUrl = process.env.NEON_PROXY_URL || ""
 // @ts-ignore
-const accounts = process.env.NEON_ACCOUNTS.split(",")
+const accounts = (process.env.NEON_ACCOUNTS || "0x1e9abebd162d2e4a45d13d75847f7a6737392693761e2920b5f22c5321cd55bf").split(",")
 // @ts-ignore
 const chainId = parseInt(process.env.NEON_CHAIN_ID) || 111
 
