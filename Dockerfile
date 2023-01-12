@@ -15,7 +15,7 @@ COPY . .
 
 RUN apt-get install make python3 gcc g++ libc6
 RUN git config --global --replace-all url."https://github.com/".insteadOf ssh://git@github.com/
-RUN npm ci --legacy-peer-deps
+RUN yarn install
 
 # Bundle app source
 COPY . .
