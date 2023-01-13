@@ -63,7 +63,7 @@ async function setupTest() {
 
   console.log("Deploying SUSD")
   const ERC20 = await ethers.getContractFactory("GenericERC20")
-  const SUSD = await ERC20.deploy("Synthetix USD", "sUSD", "18")
+  SUSD = await ERC20.deploy("Synthetix USD", "sUSD", "18")
 
   await SUSD.deployed()
 
