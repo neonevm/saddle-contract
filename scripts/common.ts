@@ -46,16 +46,17 @@ async function setupCommon() {
 
   console.log("\nDeploying DAI")
   DAI = await ERC20.deploy("Dai Stablecoin", "DAI", "18")
+  await DAI.deployed()
   console.log("Deploying USDC")
   USDC = await ERC20.deploy("USD Coin", "USDC", "6")
+  await USDC.deployed()
   console.log("Deploying USDT")
   USDT = await ERC20.deploy("Tether USD", "USDT", "6")
+  await USDT.deployed()
   const LPToken = await ethers.getContractFactory("LPToken")
   lpToken = await LPToken.deploy()
+  await lpToken.deployed()
 
-  await DAI.deployed()
-  await USDC.deployed()
-  await USDT.deployed()
 
   TOKENS.push(DAI, USDC, USDT)
 
