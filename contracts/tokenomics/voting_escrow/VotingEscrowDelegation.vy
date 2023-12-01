@@ -553,7 +553,6 @@ def burn(_token_id: uint256):
     self._burn(_token_id)
 
 
-#@ if mode == "test":
 @external
 def _mint_for_testing(_to: address, _token_id: uint256):
     self._mint(_to, _token_id)
